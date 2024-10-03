@@ -31,6 +31,7 @@ public:
     xRockerBtnDataStruct _keyData;
     int motiontime = 0;
     float dt = 0.002;     // 0.001~0.01
+    bool deadManSwitchActive = false;
 };
 
 void Custom::UDPRecv()
@@ -53,20 +54,39 @@ void Custom::RobotControl()
     ReadRCInput(&rc_input);
     ConvertRCToRockerBtn(&rc_input, &_keyData);
 
-    // Map joystick inputs directly to velocity commands
-    cmd.velocity[0] = _keyData.lx;  // Forward/backward velocity
-    cmd.velocity[1] = _keyData.ly;  // Left/right velocity
-    cmd.yawSpeed = _keyData.rx;     // Rotational velocity
+    // Check dead man's switch (assuming button B is used)
+    deadManSwitchActive = (_keyData.btn.components.B == 1);
 
-    // Example of using a button input
-    if(_keyData.btn.components.A == 1){
-        std::cout << "Button A is pressed, stopping movement" << std::endl;
+    if (deadManSwitchActive) {
+        // Dead man's switch is active, allow movement
+        cmd.velocity[0] = _keyData.lx;  // Forward/backward velocity
+        cmd.velocity[1] = _keyData.ly;  // Left/right velocity
+        cmd.yawSpeed = _keyData.rx;     // Rotational velocity
+
+        // Example of using another button input
+        if(_keyData.btn.components.A == 1){
+            std::cout << "Button A is pressed, stopping movement" << std::endl;
+            cmd.velocity[0] = 0;
+            cmd.velocity[1] = 0;
+            cmd.yawSpeed = 0;
+        }
+    } else {
+        // Dead man's switch is not active, stop all movement
         cmd.velocity[0] = 0;
         cmd.velocity[1] = 0;
         cmd.yawSpeed = 0;
+        cmd.mode = 1;  // Assuming mode 1 is for standing/stopping. Adjust as per SDK documentation.
     }
 
+    // Always send the command, whether it's movement or stopping
     udp.SetSend(cmd);
+
+    // Logging the state for debugging and monitoring
+    if (deadManSwitchActive) {
+        std::cout << "Dead man's switch active. Movement allowed." << std::endl;
+    } else {
+        std::cout << "Dead man's switch inactive. Robot stopped." << std::endl;
+    }
 }
 
 int main(void)
