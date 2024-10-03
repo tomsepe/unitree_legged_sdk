@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <iostream>
+#include <cstring>
 
 static int uart_fd = -1;
 
@@ -18,6 +19,13 @@ void InitializeRCUART(const char* port, int baud_rate) {
     cfsetispeed(&options, baud_rate);
     cfsetospeed(&options, baud_rate);
     options.c_cflag |= (CLOCAL | CREAD);
+    options.c_cflag &= ~PARENB;
+    options.c_cflag &= ~CSTOPB;
+    options.c_cflag &= ~CSIZE;
+    options.c_cflag |= CS8;
+    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+    options.c_iflag &= ~(IXON | IXOFF | IXANY);
+    options.c_oflag &= ~OPOST;
     tcsetattr(uart_fd, TCSANOW, &options);
 }
 
@@ -29,7 +37,7 @@ void ReadRCInput(xRCInputStruct* rc_input) {
 
     int bytes_read = read(uart_fd, rc_input->channels, sizeof(rc_input->channels));
     if (bytes_read != sizeof(rc_input->channels)) {
-        std::cerr << "Error reading RC data" << std::endl;
+        std::cerr << "Error reading RC data: " << bytes_read << " bytes read" << std::endl;
     }
 }
 
@@ -42,8 +50,10 @@ void ConvertRCToRockerBtn(const xRCInputStruct* rc_input, xRockerBtnDataStruct* 
 
     // Convert other channels to button states
     rocker_btn->btn.components.A = (rc_input->channels[4] > 127) ? 1 : 0;
-    // ... map other buttons as needed ...
+    rocker_btn->btn.components.B = (rc_input->channels[5] > 127) ? 1 : 0;
+    rocker_btn->btn.components.X = (rc_input->channels[6] > 127) ? 1 : 0;
+    rocker_btn->btn.components.Y = (rc_input->channels[7] > 127) ? 1 : 0;
 
     // Copy raw RC input
-    memcpy(&rocker_btn->rc_input, rc_input, sizeof(xRCInputStruct));
+    std::memcpy(&rocker_btn->rc_input, rc_input, sizeof(xRCInputStruct));
 }

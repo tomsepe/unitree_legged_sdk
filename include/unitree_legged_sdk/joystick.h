@@ -5,6 +5,7 @@ Copyright (c) 2020, Unitree Robotics.Co.Ltd. All rights reserved.
 #define _UNITREE_LEGGED_JOYSTICK_H_
 
 #include <stdint.h>
+
 // 16b
 typedef union {
     struct {
@@ -28,7 +29,12 @@ typedef union {
     uint16_t value;
 } xKeySwitchUnion;
 
-// 40 Byte (now used 24B)
+// Structure for RC input from Arduino
+typedef struct {
+    float channels[8];  // Assuming 8 channels, adjust if needed
+} xRCInputStruct;
+
+// 40 Byte
 typedef struct {
     uint8_t head[2];
     xKeySwitchUnion btn;
@@ -37,11 +43,10 @@ typedef struct {
     float ry;
     float L2;
     float ly;
-    xRCInputStruct rc_input;  // New field for RC input
-    uint8_t idle[8];  // Reduced from 16 to 8 to maintain total size
+    xRCInputStruct rc_input;
 } xRockerBtnDataStruct;
 
-// Add function declarations for RC-specific operations
+// Function declarations for RC-specific operations
 void InitializeRCUART(const char* port, int baud_rate);
 void ReadRCInput(xRCInputStruct* rc_input);
 void ConvertRCToRockerBtn(const xRCInputStruct* rc_input, xRockerBtnDataStruct* rocker_btn);
