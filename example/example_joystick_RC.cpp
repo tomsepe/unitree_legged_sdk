@@ -11,6 +11,7 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 #include <string.h>
 #include <thread>
 #include <chrono>
+#include <atomic>
 
 using namespace UNITREE_LEGGED_SDK;
 
@@ -19,12 +20,15 @@ class Custom
 public:
     Custom(uint8_t level): 
         safe(LeggedType::B1), 
-        udp(level, 8090, "192.168.123.220", 8082) {  // Changed to high-level controller
+        udp(level, 8090, "192.168.123.220", 8082),
+        lastWatchdogReset(std::chrono::steady_clock::now()),
+        watchdogTriggered(false) {  // Changed to high-level controller
         udp.InitCmdData(cmd);
     }
     void UDPRecv();
     void UDPSend();
     void RobotControl();
+    void WatchdogCheck();
 
     Safety safe;
     UDP udp;
@@ -36,6 +40,10 @@ public:
     bool deadManSwitchActive = false;
     float currentVelocity[3] = {0, 0, 0};  // x, y, yaw
     float decelerationRate = 2.0;  // units/second, adjust as needed
+
+    std::chrono::steady_clock::time_point lastWatchdogReset;
+    std::atomic<bool> watchdogTriggered;
+    const std::chrono::milliseconds watchdogTimeout{10}; // 10ms timeout, adjust as needed
 };
 
 void Custom::UDPRecv()
@@ -52,6 +60,9 @@ void Custom::RobotControl()
 {
     motiontime++;
     udp.GetRecv(state);
+
+    // Reset the watchdog timer at the start of each control loop iteration
+    lastWatchdogReset = std::chrono::steady_clock::now();
 
     xRCInputStruct rc_input;
     if (ReadRCInput(&rc_input)) {
@@ -121,7 +132,26 @@ void Custom::RobotControl()
         }
     }
 
+    // Check if watchdog has been triggered
+    if (watchdogTriggered.load()) {
+        // Perform safety action (e.g., stop the robot)
+        cmd.velocity[0] = 0;
+        cmd.velocity[1] = 0;
+        cmd.yawSpeed = 0;
+        cmd.mode = 1;  // Switch to standing mode
+        std::cerr << "Watchdog triggered! Control loop frequency issue detected." << std::endl;
+    }
+
     udp.SetSend(cmd);
+}
+
+void Custom::WatchdogCheck()
+{
+    auto now = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastWatchdogReset);
+    if (duration > watchdogTimeout) {
+        watchdogTriggered.store(true);
+    }
 }
 
 int main(void)
@@ -144,6 +174,13 @@ int main(void)
     loop_udpSend.start();
     loop_udpRecv.start();
     loop_control.start();
+
+    std::thread watchdogThread([&custom]() {
+        while (true) {
+            custom.WatchdogCheck();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    });
 
     while(1){
         sleep(10);
