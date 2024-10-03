@@ -9,6 +9,8 @@ Use of this source code is governed by the MPL-2.0 license, see LICENSE.
 #include <iostream>
 #include <unistd.h>
 #include <string.h>
+#include <thread>
+#include <chrono>
 
 using namespace UNITREE_LEGGED_SDK;
 
@@ -49,44 +51,52 @@ void Custom::RobotControl()
     motiontime++;
     udp.GetRecv(state);
 
-    // Read RC input from Arduino and convert to joystick data
     xRCInputStruct rc_input;
-    ReadRCInput(&rc_input);
-    ConvertRCToRockerBtn(&rc_input, &_keyData);
+    if (ReadRCInput(&rc_input)) {
+        ConvertRCToRockerBtn(&rc_input, &_keyData);
 
-    // Check dead man's switch (assuming button B is used)
-    deadManSwitchActive = (_keyData.btn.components.B == 1);
+        // Check dead man's switch (assuming button B is used)
+        deadManSwitchActive = (_keyData.btn.components.B == 1);
 
-    if (deadManSwitchActive) {
-        // Dead man's switch is active, allow movement
-        cmd.velocity[0] = _keyData.lx;  // Forward/backward velocity
-        cmd.velocity[1] = _keyData.ly;  // Left/right velocity
-        cmd.yawSpeed = _keyData.rx;     // Rotational velocity
+        if (deadManSwitchActive) {
+            // Dead man's switch is active, allow movement
+            cmd.velocity[0] = _keyData.lx;  // Forward/backward velocity
+            cmd.velocity[1] = _keyData.ly;  // Left/right velocity
+            cmd.yawSpeed = _keyData.rx;     // Rotational velocity
 
-        // Example of using another button input
-        if(_keyData.btn.components.A == 1){
-            std::cout << "Button A is pressed, stopping movement" << std::endl;
+            // Example of using another button input
+            if(_keyData.btn.components.A == 1){
+                std::cout << "Button A is pressed, stopping movement" << std::endl;
+                cmd.velocity[0] = 0;
+                cmd.velocity[1] = 0;
+                cmd.yawSpeed = 0;
+            }
+        } else {
+            // Dead man's switch is not active, stop all movement
             cmd.velocity[0] = 0;
             cmd.velocity[1] = 0;
             cmd.yawSpeed = 0;
+            cmd.mode = 1;  // Assuming mode 1 is for standing/stopping. Adjust as per SDK documentation.
         }
-    } else {
-        // Dead man's switch is not active, stop all movement
+
+        // Logging the state for debugging and monitoring
+        if (deadManSwitchActive) {
+            std::cout << "Dead man's switch active. Movement allowed." << std::endl;
+        } else {
+            std::cout << "Dead man's switch inactive. Robot stopped." << std::endl;
+        }
+    }
+    else {
+        // Handle the case where no new RC input is available
+        std::cout << "No new RC input available" << std::endl;
+        // Stop all movement as a safety measure
         cmd.velocity[0] = 0;
         cmd.velocity[1] = 0;
         cmd.yawSpeed = 0;
-        cmd.mode = 1;  // Assuming mode 1 is for standing/stopping. Adjust as per SDK documentation.
+        cmd.mode = 1;  // Assuming mode 1 is for standing/stopping
     }
 
-    // Always send the command, whether it's movement or stopping
     udp.SetSend(cmd);
-
-    // Logging the state for debugging and monitoring
-    if (deadManSwitchActive) {
-        std::cout << "Dead man's switch active. Movement allowed." << std::endl;
-    } else {
-        std::cout << "Dead man's switch inactive. Robot stopped." << std::endl;
-    }
 }
 
 int main(void)
@@ -98,6 +108,9 @@ int main(void)
 
     Custom custom(HIGHLEVEL);
     InitializeRCUART("/dev/ttyACM0", B115200);  // Adjust port and baud rate to match your Arduino setup
+
+    // Give some time for UART initialization and initial data reading
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     LoopFunc loop_control("control_loop", custom.dt,    boost::bind(&Custom::RobotControl, &custom));
     LoopFunc loop_udpSend("udp_send",     custom.dt, 3, boost::bind(&Custom::UDPSend,      &custom));
