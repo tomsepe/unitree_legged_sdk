@@ -34,6 +34,8 @@ public:
     int motiontime = 0;
     float dt = 0.002;     // 0.001~0.01
     bool deadManSwitchActive = false;
+    float currentVelocity[3] = {0, 0, 0};  // x, y, yaw
+    float decelerationRate = 2.0;  // units/second, adjust as needed
 };
 
 void Custom::UDPRecv()
@@ -60,22 +62,35 @@ void Custom::RobotControl()
 
         if (deadManSwitchActive) {
             // Dead man's switch is active, allow movement
-            cmd.velocity[0] = _keyData.lx;  // Forward/backward velocity
-            cmd.velocity[1] = _keyData.ly;  // Left/right velocity
-            cmd.yawSpeed = _keyData.rx;     // Rotational velocity
+            currentVelocity[0] = _keyData.lx;  // Forward/backward velocity
+            currentVelocity[1] = _keyData.ly;  // Left/right velocity
+            currentVelocity[2] = _keyData.rx;  // Rotational velocity
 
             // Example of using another button input
             if(_keyData.btn.components.A == 1){
                 std::cout << "Button A is pressed, stopping movement" << std::endl;
-                cmd.velocity[0] = 0;
-                cmd.velocity[1] = 0;
-                cmd.yawSpeed = 0;
+                currentVelocity[0] = 0;
+                currentVelocity[1] = 0;
+                currentVelocity[2] = 0;
             }
         } else {
-            // Dead man's switch is not active, stop all movement
-            cmd.velocity[0] = 0;
-            cmd.velocity[1] = 0;
-            cmd.yawSpeed = 0;
+            // Dead man's switch is not active, gradually slow down
+            for (int i = 0; i < 3; i++) {
+                if (currentVelocity[i] > 0) {
+                    currentVelocity[i] = std::max(0.0f, currentVelocity[i] - decelerationRate * dt);
+                } else if (currentVelocity[i] < 0) {
+                    currentVelocity[i] = std::min(0.0f, currentVelocity[i] + decelerationRate * dt);
+                }
+            }
+        }
+
+        // Apply the current velocity
+        cmd.velocity[0] = currentVelocity[0];
+        cmd.velocity[1] = currentVelocity[1];
+        cmd.yawSpeed = currentVelocity[2];
+
+        // If we've come to a complete stop, switch to standing mode
+        if (currentVelocity[0] == 0 && currentVelocity[1] == 0 && currentVelocity[2] == 0) {
             cmd.mode = 1;  // Assuming mode 1 is for standing/stopping. Adjust as per SDK documentation.
         }
 
@@ -83,17 +98,27 @@ void Custom::RobotControl()
         if (deadManSwitchActive) {
             std::cout << "Dead man's switch active. Movement allowed." << std::endl;
         } else {
-            std::cout << "Dead man's switch inactive. Robot stopped." << std::endl;
+            std::cout << "Dead man's switch inactive. Slowing down." << std::endl;
         }
     }
     else {
         // Handle the case where no new RC input is available
         std::cout << "No new RC input available" << std::endl;
-        // Stop all movement as a safety measure
-        cmd.velocity[0] = 0;
-        cmd.velocity[1] = 0;
-        cmd.yawSpeed = 0;
-        cmd.mode = 1;  // Assuming mode 1 is for standing/stopping
+        // Continue the gradual slow-down
+        for (int i = 0; i < 3; i++) {
+            if (currentVelocity[i] > 0) {
+                currentVelocity[i] = std::max(0.0f, currentVelocity[i] - decelerationRate * dt);
+            } else if (currentVelocity[i] < 0) {
+                currentVelocity[i] = std::min(0.0f, currentVelocity[i] + decelerationRate * dt);
+            }
+        }
+        cmd.velocity[0] = currentVelocity[0];
+        cmd.velocity[1] = currentVelocity[1];
+        cmd.yawSpeed = currentVelocity[2];
+
+        if (currentVelocity[0] == 0 && currentVelocity[1] == 0 && currentVelocity[2] == 0) {
+            cmd.mode = 1;  // Switch to standing mode when fully stopped
+        }
     }
 
     udp.SetSend(cmd);
