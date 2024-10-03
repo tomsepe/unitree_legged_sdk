@@ -40,7 +40,7 @@ target_link_libraries(example_recover_stand ${EXTRA_LIBS})
 # New RC joystick example
 add_executable(example_joystick_RC 
     example/example_joystick_RC.cpp
-    rc_joystick.cpp
+    example/rc_joystick.cpp
 )
 target_link_libraries(example_joystick_RC ${EXTRA_LIBS})
 
