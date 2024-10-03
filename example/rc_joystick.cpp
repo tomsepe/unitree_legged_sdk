@@ -15,6 +15,7 @@
 #include <mutex>
 #include <queue>
 #include <thread>
+#include <chrono>
 
 class RCJoystick {
 private:
@@ -31,11 +32,13 @@ private:
             xRCInputStruct rc_input;
             {
                 std::lock_guard<std::mutex> lock(uart_mutex);
-                int bytes_read = read(uart_fd, &rc_input, sizeof(xRCInputStruct));
-                if (bytes_read != sizeof(xRCInputStruct)) {
+                int bytes_read = read(uart_fd, &rc_input.channels, sizeof(rc_input.channels));
+                if (bytes_read != sizeof(rc_input.channels)) {
                     std::cerr << "Error reading RC data: " << bytes_read << " bytes read" << std::endl;
                     continue;
                 }
+                rc_input.timestamp = std::chrono::steady_clock::now();
+                rc_input.deadManSwitchPressed = (rc_input.channels[5] > 0.5f);  // Assuming channel 6 is the dead man's switch
             }
             
             {
@@ -86,12 +89,15 @@ public:
     }
 
     // Read the latest RC input data from the queue
-    bool ReadRCInput(xRCInputStruct* rc_input) {
-        std::lock_guard<std::mutex> lock(queue_mutex);
-        if (data_queue.empty()) return false;
-        *rc_input = data_queue.front();
-        data_queue.pop();
-        return true;
+    bool ReadRCInput(xRCInputStruct* rc_input, std::chrono::milliseconds timeout = std::chrono::milliseconds(100)) {
+        auto start_time = std::chrono::steady_clock::now();
+        while (std::chrono::steady_clock::now() - start_time < timeout) {
+            if (g_rcJoystick.ReadRCInput(rc_input)) {
+                return true;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        return false;
     }
 };
 
@@ -121,9 +127,11 @@ void ConvertRCToRockerBtn(const xRCInputStruct* rc_input, xRockerBtnDataStruct* 
     rocker_btn->rx = rc_input->channels[2];  // Right joystick X-axis
     rocker_btn->ry = rc_input->channels[3];  // Right joystick Y-axis
 
+    // Clearly identify the dead man's switch
+    rocker_btn->btn.components.B = rc_input->deadManSwitchPressed ? 1 : 0;  // Use B as the dead man's switch
+
     // Convert button states (assuming 0.0 is off, 1.0 is on)
     rocker_btn->btn.components.A = rc_input->channels[4] > 0.5f ? 1 : 0;
-    rocker_btn->btn.components.B = rc_input->channels[5] > 0.5f ? 1 : 0;
     rocker_btn->btn.components.X = rc_input->channels[6] > 0.5f ? 1 : 0;
     rocker_btn->btn.components.Y = rc_input->channels[7] > 0.5f ? 1 : 0;
 
