@@ -17,7 +17,7 @@ class Custom
 public:
     Custom(uint8_t level): 
         safe(LeggedType::B1), 
-        udp(level, 8090, "192.168.123.10", 8007) {
+        udp(level, 8090, "192.168.123.220", 8082) {  // Changed to high-level controller
         udp.InitCmdData(cmd);
     }
     void UDPRecv();
@@ -26,8 +26,8 @@ public:
 
     Safety safe;
     UDP udp;
-    LowCmd cmd = {0};
-    LowState state = {0};
+    HighCmd cmd = {0};
+    HighState state = {0};
     xRockerBtnDataStruct _keyData;
     int motiontime = 0;
     float dt = 0.002;     // 0.001~0.01
@@ -53,31 +53,30 @@ void Custom::RobotControl()
     ReadRCInput(&rc_input);
     ConvertRCToRockerBtn(&rc_input, &_keyData);
 
-    // Example of using the joystick data
+    // Map joystick inputs directly to velocity commands
+    cmd.velocity[0] = _keyData.lx;  // Forward/backward velocity
+    cmd.velocity[1] = _keyData.ly;  // Left/right velocity
+    cmd.yawSpeed = _keyData.rx;     // Rotational velocity
+
+    // Example of using a button input
     if(_keyData.btn.components.A == 1){
-        std::cout << "Button A is pressed, lx: " << _keyData.lx << ", ly: " << _keyData.ly << std::endl;
+        std::cout << "Button A is pressed, stopping movement" << std::endl;
+        cmd.velocity[0] = 0;
+        cmd.velocity[1] = 0;
+        cmd.yawSpeed = 0;
     }
 
-    // Add your robot control logic here using _keyData
-    // For example:
-    cmd.motorCmd[0].q = _keyData.lx * some_scaling_factor;
-    cmd.motorCmd[1].q = _keyData.ly * some_scaling_factor;
-    // ... control other motors or functions based on joystick input
-
-    safe.PositionLimit(cmd);
-    safe.PowerProtect(cmd, state, 1);
-    
     udp.SetSend(cmd);
 }
 
 int main(void)
 {
-    std::cout << "Communication level is set to LOW-level." << std::endl
+    std::cout << "Communication level is set to HIGH-level." << std::endl
               << "WARNING: Make sure the robot is standing on the ground." << std::endl
               << "Press Enter to continue..." << std::endl;
     std::cin.ignore();
 
-    Custom custom(LOWLEVEL);
+    Custom custom(HIGHLEVEL);
     InitializeRCUART("/dev/ttyACM0", B115200);  // Adjust port and baud rate to match your Arduino setup
 
     LoopFunc loop_control("control_loop", custom.dt,    boost::bind(&Custom::RobotControl, &custom));
