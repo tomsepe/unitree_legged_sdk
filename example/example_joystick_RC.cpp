@@ -20,11 +20,12 @@ public:
         safe(LeggedType::B1), 
         udp(level, 8090, "192.168.123.10", 8007){
         udp.InitCmdData(cmd);
-        InitializeUART();
+        InitializeRCUART("/dev/ttyS0", B115200);
     }
     void UDPSend();
     void UDPRecv();
     void RobotControl();
+    void UpdateRCJoystick();
 
     Safety safe;
     UDP udp;
@@ -84,13 +85,19 @@ void Custom::ConvertRCToKeyData()
     // ... map other buttons as needed ...
 }
 
+void Custom::UpdateRCJoystick()
+{
+    xRCInputStruct rc_input;
+    ReadRCInput(&rc_input);
+    ConvertRCToRockerBtn(&rc_input, &_keyData);
+}
+
 void Custom::RobotControl() 
 {
     motiontime++;
     udp.GetRecv(state);
 
-    ReadRCJoystick();
-    ConvertRCToKeyData();
+    UpdateRCJoystick();
 
     if(_keyData.btn.components.A == 1){
         std::cout << "The key A is pressed, and the value of lx is " << _keyData.lx << std::endl;

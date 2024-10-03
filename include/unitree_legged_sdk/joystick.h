@@ -37,8 +37,13 @@ typedef struct {
     float ry;
     float L2;
     float ly;
-
-    uint8_t idle[16];
+    xRCInputStruct rc_input;  // New field for RC input
+    uint8_t idle[8];  // Reduced from 16 to 8 to maintain total size
 } xRockerBtnDataStruct;
+
+// Add function declarations for RC-specific operations
+void InitializeRCUART(const char* port, int baud_rate);
+void ReadRCInput(xRCInputStruct* rc_input);
+void ConvertRCToRockerBtn(const xRCInputStruct* rc_input, xRockerBtnDataStruct* rocker_btn);
 
 #endif  // _UNITREE_LEGGED_JOYSTICK_H_
