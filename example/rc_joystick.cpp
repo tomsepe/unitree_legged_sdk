@@ -122,18 +122,19 @@ void ReadRCInput(xRCInputStruct* rc_input) {
 // Convert raw RC input to Unitree SDK joystick format
 void ConvertRCToRockerBtn(const xRCInputStruct* rc_input, xRockerBtnDataStruct* rocker_btn) {
     // Assuming Arduino sends values already in -1 to 1 range
-    rocker_btn->lx = rc_input->channels[0];  // Left joystick X-axis
-    rocker_btn->ly = rc_input->channels[1];  // Left joystick Y-axis
-    rocker_btn->rx = rc_input->channels[2];  // Right joystick X-axis
-    rocker_btn->ry = rc_input->channels[3];  // Right joystick Y-axis
-
+    rocker_btn->ly = rc_input->channels[0];  // Left joystick Y-axis
+    rocker_btn->rx = rc_input->channels[1];  // Right joystick X-axis
+    rocker_btn->ry = rc_input->channels[2];  // Right joystick Y-axis
+    rocker_btn->lx = rc_input->channels[3];  // Left joystick X-axis
+    
+   
     // Clearly identify the dead man's switch
     rocker_btn->btn.components.B = rc_input->deadManSwitchPressed ? 1 : 0;  // Use B as the dead man's switch
 
     // Convert button states (assuming 0.0 is off, 1.0 is on)
-    rocker_btn->btn.components.A = rc_input->channels[4] > 0.5f ? 1 : 0;
-    rocker_btn->btn.components.X = rc_input->channels[6] > 0.5f ? 1 : 0;
-    rocker_btn->btn.components.Y = rc_input->channels[7] > 0.5f ? 1 : 0;
+    rocker_btn->btn.components.A = rc_input->channels[6] > 0.5f ? 1 : 0;
+    rocker_btn->btn.components.X = rc_input->channels[7] > 0.5f ? 1 : 0;
+    rocker_btn->btn.components.Y = rc_input->channels[8] > 0.5f ? 1 : 0;
 
     // Copy raw RC input for reference
     std::memcpy(&rocker_btn->rc_input, rc_input, sizeof(xRCInputStruct));
