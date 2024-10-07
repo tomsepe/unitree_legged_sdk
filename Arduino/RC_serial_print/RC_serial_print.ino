@@ -22,9 +22,6 @@ int ch6;  // 3-way top switch, 0-1-2 (1888-1495-1095)
 int ch7;  // 3-way left side front, 0(down)-1(middle)-2(up) (1888-1495-1095)
 int ch8;
 
-struct RCData {
-  float channels[8];
-};
 
 // the setup routine runs once when you press reset:
 void setup() {
@@ -43,68 +40,43 @@ void setup() {
 
 //Main Program
 void loop() {
-
-    // Read channels 1-4 as before
-  rcData.channels[0] = map(pulseIn(chA, HIGH), 1000, 2000, -1000, 1000) / 1000.0f;
-  rcData.channels[1] = map(pulseIn(chB, HIGH), 1000, 2000, -1000, 1000) / 1000.0f;
-  rcData.channels[2] = map(pulseIn(chC, HIGH), 1000, 2000, -1000, 1000) / 1000.0f;
-  rcData.channels[3] = map(pulseIn(chD, HIGH), 1000, 2000, -1000, 1000) / 1000.0f;
-
-  // Handle binary switches for channels 5-8
-  int rawCh5 = pulseIn(chE, HIGH);
-  rcData.channels[4] = (rawCh5 > 1500) ? 1.0f : -1.0f;
-
-  int rawCh6 = pulseIn(chF, HIGH);
-  rcData.channels[5] = (rawCh6 > 1500) ? 1.0f : -1.0f;
-
-  int rawCh7 = pulseIn(chG, HIGH);
-  rcData.channels[6] = (rawCh7 > 1500) ? 1.0f : -1.0f;
-
-  rcData.channels[7] = map(pulseIn(chH, HIGH), 1000, 2000, -1000, 1000) / 1000.0f;
-
-  // Send the binary data
-  Serial.write((uint8_t*)&rcData, sizeof(RCData));
-
-  // Add a small delay to avoid flooding the serial port
-  delay(20);
-
-  // // read the input channels
-  // ch1 = pulseIn (chA,HIGH);  //Read and store channel 1
-  // Serial.print ("Ch1:");  //Display text string on Serial Monitor to distinguish variables
-  // Serial.print (ch1);     //Print in the value of channel 1
-  // Serial.print ("|");
+  // read the input channels
+  ch1 = pulseIn (chA,HIGH);  //Read and store channel 1
+  Serial.print ("Ch1:");  //Display text string on Serial Monitor to distinguish variables
+  Serial.print (ch1);     //Print in the value of channel 1
+  Serial.print ("|");
  
-  // ch2 = pulseIn (chB,HIGH);
-  // Serial.print ("Ch2:");
-  // Serial.print (ch2);
-  // Serial.print ("|");
+  ch2 = pulseIn (chB,HIGH);
+  Serial.print ("Ch2:");
+  Serial.print (ch2);
+  Serial.print ("|");
  
-  // ch3 = pulseIn (chC,HIGH);
-  // Serial.print ("Ch3:");
-  // Serial.print (ch3);
-  // Serial.print ("|");
+  ch3 = pulseIn (chC,HIGH);
+  Serial.print ("Ch3:");
+  Serial.print (ch3);
+  Serial.print ("|");
  
-  // ch4 = pulseIn (chD,HIGH);
-  // Serial.print ("Ch4:");
-  // Serial.print (ch4);
-  // Serial.print ("|");
+  ch4 = pulseIn (chD,HIGH);
+  Serial.print ("Ch4:");
+  Serial.print (ch4);
+  Serial.print ("|");
  
-  // ch5 = pulseIn (chE,HIGH);
-  // Serial.print ("Ch5:");
-  // Serial.print (ch5);
-  // Serial.print ("|");
+  ch5 = pulseIn (chE,HIGH);
+  Serial.print ("Ch5:");
+  Serial.print (ch5);
+  Serial.print ("|");
  
-  // ch6 = pulseIn (chF,HIGH);
-  // Serial.print ("Ch6:");
-  // Serial.print (ch6);
-  // Serial.print ("|");
+  ch6 = pulseIn (chF,HIGH);
+  Serial.print ("Ch6:");
+  Serial.print (ch6);
+  Serial.print ("|");
  
-  // ch7 = pulseIn (chG,HIGH);
-  // Serial.print ("Ch7:");
-  // Serial.print (ch7);
-  // Serial.print ("|");
+  ch7 = pulseIn (chG,HIGH);
+  Serial.print ("Ch7:");
+  Serial.print (ch7);
+  Serial.print ("|");
  
-  // ch8 = pulseIn (chH,HIGH);
-  // Serial.print ("Ch8:");
-  // Serial.println (ch8);
+  ch8 = pulseIn (chH,HIGH);
+  Serial.print ("Ch8:");
+  Serial.println (ch8);
 }

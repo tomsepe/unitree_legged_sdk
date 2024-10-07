@@ -48,17 +48,17 @@ void loop() {
   // Serial.print("Channel 1:"); // Print the value of
   // Serial.println(ch1);        // each channel
 
-  // Serial.print("Channel 2:"); //might be aux switch?
-  // Serial.println(ch2);
+  Serial.print("Channel 2:"); //might be aux switch?
+  Serial.println(ch2);
 
-  // Serial.print("Channel 3:"); //rudder left joystick L-R
-  // Serial.println(ch3);
+  Serial.print("Channel 3:"); //rudder left joystick L-R
+  Serial.println(ch3);
 
-  //   Serial.print("Channel 4:"); // elev left joystick Up-Down (dead)
-  // Serial.println(ch4);
+    Serial.print("Channel 4:"); // elev left joystick Up-Down (dead)
+  Serial.println(ch4);
 
-  // Serial.print("Channel 5:");  // should be aeri right joystick L-R but getting 0
-  // Serial.println(ch5);
+  Serial.print("Channel 5:");  // should be aeri right joystick L-R but getting 0
+  Serial.println(ch5);
 
   Serial.print("Channel 6:");  // should be aeri right joystick L-R but getting 0
   Serial.println(ch6);
