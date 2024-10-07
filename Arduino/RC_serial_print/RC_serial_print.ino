@@ -79,4 +79,7 @@ void loop() {
   ch8 = pulseIn (chH,HIGH);
   Serial.print ("Ch8:");
   Serial.println (ch8);
+
+    // Add a small delay to avoid flooding the serial port
+  delay(200);
 }
